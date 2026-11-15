@@ -1,0 +1,24 @@
+# Never commit agent run history, potentially sensitive tasks, or credentials.
+.agent-runs/
+.agent-tasks/
+antigravity-runs/
+.codex/
+.gemini/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+
+# Build/editor/system files
+node_modules/
+coverage/
+dist/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.zip
