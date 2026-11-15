@@ -16,9 +16,11 @@ or require a separate approval workflow before agent execution.
   permitted by the machine, sandbox, and Antigravity permission policies.
 - Scope task prompts to specific files. Never include tokens, private keys,
   `.env` contents, passwords, or unrelated private data.
-- Detailed worker results and diagnostics may contain secrets. Bridge reports
-  are stored under your local Codex home, not this repository. They should
-  remain local and never be committed or uploaded.
+- Detailed worker results and diagnostics, including worker stderr, may contain
+  secrets. By default, reports are stored under your local Codex home. Use
+  `--report-dir .agent-runs` to store reports in a project when sandbox write
+  access requires it. Relative paths resolve from `--cwd`. Gitignore any
+  project-local report directory and never commit or upload its contents.
 - The `.gitignore` excludes the most common run directories and secret file
   patterns, but **review `git status` and `git diff --cached` before pushing**.
 - If the Codex sandbox blocks Antigravity authentication or network, use

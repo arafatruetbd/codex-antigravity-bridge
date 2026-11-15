@@ -11,19 +11,20 @@ const MAX_STDERR_BYTES = 2 * 1024 * 1024;
 const RESPONSE_PREVIEW_CHARS = 4000;
 
 function usage(exitCode = 2) {
-  console.error('Usage: node delegate-antigravity.mjs [--cwd PROJECT_DIR] --file TASK.md');
-  console.error('   or: node delegate-antigravity.mjs [--cwd PROJECT_DIR] --text "Your task"');
+  console.error('Usage: node delegate-antigravity.mjs [--cwd PROJECT_DIR] [--report-dir DIR] --file TASK.md');
+  console.error('   or: node delegate-antigravity.mjs [--cwd PROJECT_DIR] [--report-dir DIR] --text "Your task"');
   process.exit(exitCode);
 }
 
-const options = { cwd: process.cwd(), file: null, text: null };
+const options = { cwd: process.cwd(), reportDir: null, file: null, text: null };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const flag = argv[i];
   if (flag === '--help' || flag === '-h') usage(0);
-  if (!['--cwd', '--file', '--text'].includes(flag) || !argv[i + 1]) usage();
+  if (!['--cwd', '--file', '--text', '--report-dir'].includes(flag) || !argv[i + 1]) usage();
   const value = argv[++i];
   if (flag === '--cwd') options.cwd = value;
+  else if (flag === '--report-dir') options.reportDir = value;
   else if (flag === '--file') options.file = value;
   else options.text = value;
 }
@@ -110,10 +111,12 @@ const codexHome = process.env.CODEX_HOME ? resolve(process.env.CODEX_HOME) : joi
 const safeName = basename(project).replace(/[^a-zA-Z0-9_-]/g, '_') || 'project';
 const projectHash = createHash('sha256').update(project).digest('hex').slice(0, 8);
 const projectName = `${safeName}-${projectHash}`;
-const reportDirectory = join(codexHome, 'antigravity-runs', projectName);
+const reportDirectory = options.reportDir
+  ? (isAbsolute(options.reportDir) ? resolve(options.reportDir) : resolve(project, options.reportDir))
+  : join(codexHome, 'antigravity-runs', projectName);
 const reportName = `${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID().slice(0, 8)}.json`;
 let reportFile = null;
-let logWarning = null;
+let reportError = null;
 
 try {
   await mkdir(reportDirectory, { recursive: true });
@@ -131,7 +134,7 @@ try {
     raw_stdout: envelope === null ? stdout.slice(0, MAX_STDOUT_BYTES) : undefined,
   }, null, 2), 'utf8');
 } catch (error) {
-  logWarning = `Could not write report under Codex home: ${error.message}`;
+  reportError = `Could not write diagnostic report: ${error.message}`;
 }
 
 console.log(JSON.stringify({
@@ -146,7 +149,8 @@ console.log(JSON.stringify({
   conversation_id: envelope?.conversation_id ?? null,
   usage: envelope?.usage ?? null,
   error: envelope?.error ?? spawnError ?? (outputExceeded ? 'Output size limit exceeded' : undefined),
-  warning: stderr ? 'Worker wrote to stderr; inspect report and permissions.' : logWarning || undefined,
-  report_file: reportFile,
+  worker_warning: stderr ? 'Worker wrote to stderr; see report_file when available.' : undefined,
+  report_error: reportError || undefined,
+  ...(reportFile ? { report_file: reportFile } : {}),
 }, null, 2));
 if (!success) process.exitCode = 1;

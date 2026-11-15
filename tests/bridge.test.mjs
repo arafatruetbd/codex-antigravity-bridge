@@ -51,7 +51,53 @@ test('successful worker response and report are scoped to CODEX_HOME', async () 
     assert.equal(obj.conversation_id, 'mock-conversation-id');
     assert.equal(obj.project_cwd, project);
     assert.ok(obj.report_file.startsWith(home));
+    assert.equal(obj.report_error, undefined);
     assert.equal(JSON.parse(await readFile(obj.report_file, 'utf8')).result.status, 'SUCCESS');
+  });
+});
+
+test('writes reports to a custom relative directory under the project', async () => {
+  await fixture(async ({ project, env }) => {
+    const result = await run(['--cwd', project, '--report-dir', '.agent-runs', '--text', 'WORKER_OK'], env);
+    const obj = JSON.parse(result.stdout);
+    assert.equal(result.code, 0);
+    assert.ok(obj.report_file.startsWith(join(project, '.agent-runs')));
+    assert.equal(JSON.parse(await readFile(obj.report_file, 'utf8')).result.status, 'SUCCESS');
+  });
+});
+
+test('returns report creation failure without report_file', async () => {
+  await fixture(async ({ project, env }) => {
+    const blocker = join(project, 'not-a-directory');
+    await writeFile(blocker, 'block');
+    const result = await run(['--cwd', project, '--report-dir', 'not-a-directory/child', '--text', 'WORKER_OK'], env);
+    const obj = JSON.parse(result.stdout);
+    assert.equal(result.code, 0);
+    assert.equal(obj.report_file, undefined);
+    assert.match(obj.report_error, /Could not write diagnostic report/);
+    assert.equal(obj.worker_warning, undefined);
+  });
+});
+
+test('reports worker stderr and report-write failure separately', async () => {
+  await fixture(async ({ project, env }) => {
+    const blocker = join(project, 'blocked');
+    await writeFile(blocker, 'block');
+    const result = await run(['--cwd', project, '--report-dir', 'blocked/reports', '--text', 'WORKER_OK MOCK_STDERR'], env);
+    const obj = JSON.parse(result.stdout);
+    assert.equal(result.code, 0);
+    assert.match(obj.worker_warning, /Worker wrote to stderr/);
+    assert.match(obj.report_error, /Could not write diagnostic report/);
+    assert.equal(obj.report_file, undefined);
+  });
+});
+
+test('custom report preserves worker stderr in report', async () => {
+  await fixture(async ({ project, env }) => {
+    const result = await run(['--cwd', project, '--report-dir', 'custom-reports', '--text', 'WORKER_OK MOCK_STDERR'], env);
+    const obj = JSON.parse(result.stdout);
+    assert.match(obj.worker_warning, /Worker wrote to stderr/);
+    assert.equal(JSON.parse(await readFile(obj.report_file, 'utf8')).stderr.trim(), 'Simulated worker diagnostic');
   });
 });
 

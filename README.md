@@ -70,6 +70,14 @@ Enter these prompts in Codex:
 
 Codex independently reviews the worker's changes and runs appropriate tests before reporting back.
 
+If the sandbox cannot write to the global Codex home, Codex can use a project-local report directory:
+
+```powershell
+node "$env:CODEX_HOME/bridges/antigravity/delegate-antigravity.mjs" --cwd (Get-Location).Path --report-dir ".agent-runs" --text "Your task"
+```
+
+`--report-dir` accepts an absolute path or a path relative to `--cwd`. Without it, reports continue to use `~/.codex/antigravity-runs` (or `$env:CODEX_HOME/antigravity-runs`). Add project-local report directories such as `.agent-runs/` to `.gitignore`; reports preserve worker stderr and may contain sensitive information.
+
 ## Important Notes
 
 - Opt-in applies only to the current task. Large tasks never authorize delegation. Remove outdated automatic-delegation rules from project instructions.

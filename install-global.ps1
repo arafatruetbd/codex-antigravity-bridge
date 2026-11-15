@@ -46,6 +46,7 @@ Codex is the MAIN coding agent and the final reviewer. Antigravity CLI (`agy.exe
 2. For substantial tasks, prepare a scoped prompt inside the project-local `.agent-tasks/` directory without secrets. For a small explicitly requested one-off delegation, `--text` is allowed.
 3. Run the reusable Node.js bridge from the PROJECT directory:
    `node "__BRIDGE_PATH__" --cwd "<absolute-project-path>" --file ".agent-tasks/<task-name>.md"`
+   When Codex's sandbox may not allow writes to the global Codex home, use `--report-dir ".agent-runs"` to store reports inside the project. Ensure `.agent-runs/` is gitignored because reports can contain sensitive worker diagnostics. Relative report paths are resolved from `--cwd`; without this flag, reports use the global Codex home.
    Alternatively for the user's explicit read-only test request:
    `node "__BRIDGE_PATH__" --cwd "<absolute-project-path>" --text "Reply exactly GLOBAL_WORKER_OK. Do not use tools or modify files."`
 4. Review the JSON response, modified files, `git diff`, stderr and permissions, then independently run appropriate tests. `SUCCESS` alone does not prove changes or tests succeeded.

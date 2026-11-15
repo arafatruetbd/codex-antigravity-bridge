@@ -3,6 +3,7 @@
 const args = process.argv.slice(2);
 const index = args.indexOf('-p');
 const prompt = index >= 0 ? args[index + 1] : '';
+if (prompt.includes('MOCK_STDERR')) console.error('Simulated worker diagnostic');
 if (prompt.includes('MOCK_ERROR')) {
   console.log(JSON.stringify({
     conversation_id: '', status: 'ERROR', response: '', error: 'Simulated failure'
